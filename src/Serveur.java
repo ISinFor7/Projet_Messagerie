@@ -22,9 +22,8 @@ public class Serveur extends Thread {
 	}
 	
 	public void run() {
-		while (true) {
+		while (true) { //boucle pour vérifier s'il y a des connections entrantes
 			try {
-				
 				final Socket clientSocket=serverSocket.accept();
 				executor.execute(new Runnable() {//lancement d'un thread pour un client
 					public void run() { 
@@ -39,7 +38,7 @@ public class Serveur extends Thread {
 								System.out.println(hostinput);
 								System.out.println("user:"+in.readLine());
 								System.out.println("meta"+hostinput);
-							}
+							}// sortie de la boucle
 						}catch(IOException e) {
 							System.out.println("echec port 4444");
 							System.exit(-1);

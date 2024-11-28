@@ -23,18 +23,12 @@ public class Client {
 		Key cle=null;
 		Cipher chiffrem=null;
 		try {
-<<<<<<< HEAD:src/main/Client.java
-			echoSocket=new Socket("localhost",4444); //à modifier
-			out=new PrintWriter(echoSocket.getOutputStream(),true);
-			in=new BufferedReader(new InputStreamReader(echoSocket.getInputStream()));
-		}catch(UnknownHostException e) {
-=======
 			echoSocket = new Socket("Ordenateur", 4444); // à modifier
 			out = new PrintWriter(echoSocket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(echoSocket.getInputStream()));
 			System.out.println("connécté");
 		} catch (UnknownHostException e) {
->>>>>>> c3eae76a05cdf171b252135b1cdbc55ebdb564d1:src/Client.java
+
 			System.out.println("perdu");
 			System.exit(-1);
 		} catch (IOException e) {

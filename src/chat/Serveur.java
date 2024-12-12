@@ -1,4 +1,4 @@
-package cat;
+package chat;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -48,7 +48,6 @@ public class Serveur {
 			cle=cp.getPrivate();
 			cle2=cp.getPublic();
 			byte[] ck=cle2.getEncoded();
-			System.out.println(ck.length);
 			//System.out.println("PK: " + Base64.getEncoder().encodeToString(ck));
 			//System.out.println(Base64.getEncoder().encodeToString(ck).length());
 			out.println(Base64.getEncoder().encodeToString(ck));;;
@@ -71,10 +70,6 @@ public class Serveur {
 			chiffrem.init(Cipher.ENCRYPT_MODE, cle);
 			data=hostinput.getBytes();
 			result=chiffrem.doFinal(data);
-			chiffrem.init(Cipher.DECRYPT_MODE, cle2);
-			original=chiffrem.doFinal(result);
-			chiffrem.init(Cipher.DECRYPT_MODE, clep);
-			byte[] original2=chiffrem.doFinal(result);
 			String enve="";
 			for (int i=0;i<result.length;i++) {
 				if (i==result.length-1) {					
@@ -85,11 +80,21 @@ public class Serveur {
 			}
 			//System.out.println(enve.length());
 			out.println(enve);
+			chiffrem.init(Cipher.DECRYPT_MODE, cle);
+			byte[] eml=new byte[256];
+			eml[0]=Byte.decode(in.readLine());
+			int j=1;
+			while (in.ready()) {
+				eml[j]=Byte.decode(in.readLine());
+				j++;
+			}
+			//System.out.println("crypt:"+new String(eml)); affichage cprypté
+			original=chiffrem.doFinal(eml);
 			//System.out.println(new String(result).length());
 			//System.out.println(result.length);
 			//System.out.println(hostinput);
+			System.out.print("user:");
 			System.out.println(new String(original));
-			System.out.println("user:"+in.readLine());
 			System.out.println("meta:"+hostinput);
 		}
 		

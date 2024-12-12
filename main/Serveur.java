@@ -1,70 +1,104 @@
 package main;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-import javax.crypto.*;
-import java.security.*;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Serveur {
-	
-	public static void main(String[] args) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-		
-		ServerSocket serverSocket=null;
-		try {
-			serverSocket=new ServerSocket(4444);
-		}catch (IOException e) {
-			System.out.println("erreur port 4444");
-			System.exit(-1);
-		}
-		Socket clientSocket=null;
-		PrintWriter out=null;
-		BufferedReader in=null;
-		byte[] data;
-		byte[] result;
-		byte[] original;
-		Key cle=null;
-		Cipher chiffrem=null;
-		try {
-			clientSocket=serverSocket.accept();
-			System.out.println("client connécté");
-			out=new PrintWriter(clientSocket.getOutputStream(),true);
-			in=new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			KeyGenerator kg=KeyGenerator.getInstance("AES");
-			cle=kg.generateKey();
-			chiffrem=Cipher.getInstance("AES");
-		}catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}catch(IOException e) {
-			System.out.println("echec port 4444");
-			System.exit(-1);
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-		BufferedReader messer=new BufferedReader(new InputStreamReader(System.in));
-		String hostinput;
-		while ((hostinput=messer.readLine()).equals("bye")==false) {
-			chiffrem.init(Cipher.ENCRYPT_MODE, cle);
-			data=hostinput.getBytes();
-			result=chiffrem.doFinal(data);
-			chiffrem.init(Cipher.ENCRYPT_MODE, cle);
-			original=chiffrem.doFinal(result);
-			out.println(result);
-			System.out.println(hostinput);
-			System.out.println("user:"+in.readLine());
-			System.out.println("meta"+hostinput);
-		}
-		
-		System.out.println("fin");
-		out.close();
-		in.close();
-		messer.close();
-		clientSocket.close();
-	}
+    private static final int PORT = 4444;
+    private static Map<String, PrintWriter> clients = new ConcurrentHashMap<>();
 
+    public static void main(String[] args) {
+        System.out.println("Serveur lancé port "+PORT);
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            while (true) {
+                new ClientHandler(serverSocket.accept()).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class ClientHandler extends Thread {
+        private Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+        private String name;
+
+        public ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+
+        public void run() {
+            try {
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out = new PrintWriter(socket.getOutputStream(), true);
+
+                name = in.readLine();
+
+                synchronized (clients) {
+	                if (name == null || name.isEmpty() || clients.containsKey(name)) {
+	                    socket.close();
+	                    return;
+	                }
+            	}
+                out.println("Bonjour "+name);
+
+                synchronized (clients) {
+                    clients.put(name, out);
+                    broadcastUserList();
+                }
+
+                System.out.println(name + " connecté.");
+
+                String input;
+                while ((input = in.readLine()) != null) {
+                    handlePrivateMessage(input);
+                }
+            } catch (IOException e) {
+                System.out.println(name + " déconnecté car erreur.");
+            } finally {
+                if (name != null) {
+                    System.out.println(name + " déconnecté.");
+                    clients.remove(name);
+                    broadcastUserList();
+                }
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        private void handlePrivateMessage(String input) {
+        	System.out.println(input);
+            String[] parts = input.split(" ", 2);
+            if (parts.length < 2) {
+                out.println("Message invalide.");
+                return;
+            }
+            String targetUser = parts[0];
+            String message = parts[1];
+            PrintWriter targetOut = clients.get(targetUser);
+            if (targetOut != null) {
+                targetOut.println("(De " + name + ") " + message);
+                //System.out.println("message de "+name+" à "+targetUser+" envoyé");
+                out.println("(À " + targetUser + ") " + message);
+            } else {
+                out.println("User " + targetUser + " not found.");
+            }
+        }
+
+        private void broadcastUserList() {
+            StringBuilder userList = new StringBuilder("/userlist");
+            for (String user : clients.keySet()) {
+                userList.append(" ").append(user);
+            }
+            for (PrintWriter writer : clients.values()) {
+                writer.println(userList.toString());
+            }
+        }
+    }
 }

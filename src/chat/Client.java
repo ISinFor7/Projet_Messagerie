@@ -34,7 +34,7 @@ public class Client {
 		Key cle=null;
 		Cipher chiffrem=null;
 		try {
-			echoSocket = new Socket("Ordenateur", 4444); // à modifier
+			echoSocket = new Socket("localhost", 4444); // à modifier
 			out = new PrintWriter(echoSocket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(echoSocket.getInputStream()));
 			System.out.println("connécté");

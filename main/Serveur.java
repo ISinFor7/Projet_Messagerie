@@ -74,26 +74,27 @@ public class Serveur {
 		}
 
 		private void handlePrivateMessage(String input) {
-			// System.out.println(input);
 			String[] parts = input.split(" ", 2);
 			if (parts.length < 2) {
 				out.println("Message invalide.");
 				return;
 			}
-			System.out.println(parts[1]);
+			//doublement des messages pour simplifier la crypto
+			//manière de faire absolument pas optimisé mais fera là faire par manque de temp
 			String messagedes = "";
 			String messageenv = "";
 			String targetUser = parts[0];
 			String[] message = parts[1].split("//");
-			System.out.println(message.length);
 			if (message.length == 2) {
 				messagedes = message[0];
 				messageenv = message[1];
 			}
 			PrintWriter targetOut = clients.get(targetUser);
 			if (targetOut != null) {
+				//détecte une demande de clé
 				if (parts[1].charAt(0) == 'n') {
 					targetOut.println("(nk " + name + ") " + parts[1]);
+				//détecte un envoi de clé
 				} else if (parts[1].charAt(0) == 'g') {
 					targetOut.println("(gk " + name + ") " + parts[1].substring(1));
 				} else {

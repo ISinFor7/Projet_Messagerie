@@ -2,103 +2,118 @@ package main;
 
 import java.io.*;
 import java.net.*;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Serveur {
-    private static final int PORT = 4444;
-    private static Map<String, PrintWriter> clients = new ConcurrentHashMap<>();
+	private static final int PORT = 4442;
+	private static Map<String, PrintWriter> clients = new ConcurrentHashMap<>();
 
-    public static void main(String[] args) {
-        System.out.println("Serveur lancé port "+PORT);
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            while (true) {
-                new ClientHandler(serverSocket.accept()).start();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	public static void main(String[] args) throws NoSuchAlgorithmException {
+		System.out.println("Serveur lancé port " + PORT);
+		try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+			while (true) {
+				new ClientHandler(serverSocket.accept()).start();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-    private static class ClientHandler extends Thread {
-        private Socket socket;
-        private PrintWriter out;
-        private BufferedReader in;
-        private String name;
+	private static class ClientHandler extends Thread {
+		private Socket socket;
+		private PrintWriter out;
+		private BufferedReader in;
+		private String name;
 
-        public ClientHandler(Socket socket) {
-            this.socket = socket;
-        }
+		public ClientHandler(Socket socket) throws NoSuchAlgorithmException {
+			this.socket = socket;
+		}
 
-        public void run() {
-            try {
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                out = new PrintWriter(socket.getOutputStream(), true);
+		public void run() {
+			try {
+				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				out = new PrintWriter(socket.getOutputStream(), true);
 
-                name = in.readLine();
+				name = in.readLine();
 
-                synchronized (clients) {
-	                if (name == null || name.isEmpty() || clients.containsKey(name)) {
-	                    socket.close();
-	                    return;
-	                }
-            	}
-                out.println("Bonjour "+name);
+				synchronized (clients) {
+					if (name == null || name.isEmpty() || clients.containsKey(name)) {
+						socket.close();
+						return;
+					}
+				}
+				out.println("Bonjour " + name);
 
-                synchronized (clients) {
-                    clients.put(name, out);
-                    broadcastUserList();
-                }
+				synchronized (clients) {
+					clients.put(name, out);
+					broadcastUserList();
+				}
 
-                System.out.println(name + " connecté.");
+				System.out.println(name + " connecté.");
 
-                String input;
-                while ((input = in.readLine()) != null) {
-                    handlePrivateMessage(input);
-                }
-            } catch (IOException e) {
-                System.out.println(name + " déconnecté car erreur.");
-            } finally {
-                if (name != null) {
-                    System.out.println(name + " déconnecté.");
-                    clients.remove(name);
-                    broadcastUserList();
-                }
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+				String input;
+				while ((input = in.readLine()) != null) {
+					handlePrivateMessage(input);
+				}
+			} catch (IOException e) {
+				System.out.println(name + " déconnecté car erreur.");
+			} finally {
+				if (name != null) {
+					System.out.println(name + " déconnecté.");
+					clients.remove(name);
+					broadcastUserList();
+				}
+				try {
+					socket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 
-        private void handlePrivateMessage(String input) {
-        	System.out.println(input);
-            String[] parts = input.split(" ", 2);
-            if (parts.length < 2) {
-                out.println("Message invalide.");
-                return;
-            }
-            String targetUser = parts[0];
-            String message = parts[1];
-            PrintWriter targetOut = clients.get(targetUser);
-            if (targetOut != null) {
-                targetOut.println("(De " + name + ") " + message);
-                //System.out.println("message de "+name+" à "+targetUser+" envoyé");
-                out.println("(À " + targetUser + ") " + message);
-            } else {
-                out.println("User " + targetUser + " not found.");
-            }
-        }
+		private void handlePrivateMessage(String input) {
+			// System.out.println(input);
+			String[] parts = input.split(" ", 2);
+			if (parts.length < 2) {
+				out.println("Message invalide.");
+				return;
+			}
+			System.out.println(parts[1]);
+			String messagedes = "";
+			String messageenv = "";
+			String targetUser = parts[0];
+			String[] message = parts[1].split("//");
+			System.out.println(message.length);
+			if (message.length == 2) {
+				messagedes = message[0];
+				messageenv = message[1];
+			}
+			PrintWriter targetOut = clients.get(targetUser);
+			if (targetOut != null) {
+				if (parts[1].charAt(0) == 'n') {
+					targetOut.println("(nk " + name + ") " + parts[1]);
+				} else if (parts[1].charAt(0) == 'g') {
+					targetOut.println("(gk " + name + ") " + parts[1].substring(1));
+				} else {
+					targetOut.println("(De " + name + ") " + messagedes);
+					// System.out.println("message de "+name+" à "+targetUser+" envoyé");
+					out.println("(À " + targetUser + ") " + messageenv);
+				}
+			} else {
+				out.println("User " + targetUser + " not found.");
+			}
+		}
 
-        private void broadcastUserList() {
-            StringBuilder userList = new StringBuilder("/userlist");
-            for (String user : clients.keySet()) {
-                userList.append(" ").append(user);
-            }
-            for (PrintWriter writer : clients.values()) {
-                writer.println(userList.toString());
-            }
-        }
-    }
+		private void broadcastUserList() {
+			StringBuilder userList = new StringBuilder("/userlist");
+			for (String user : clients.keySet()) {
+				userList.append(" ").append(user);
+			}
+			for (PrintWriter writer : clients.values()) {
+				writer.println(userList.toString());
+			}
+		}
+	}
 }
